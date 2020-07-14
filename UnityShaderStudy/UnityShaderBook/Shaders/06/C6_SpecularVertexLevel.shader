@@ -1,4 +1,4 @@
-﻿Shader "Unlit/C6_SpecularVertexLevel"
+﻿Shader "Book/C6_SpecularVertexLevel"
 {
     Properties
     {

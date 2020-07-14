@@ -1,4 +1,4 @@
-﻿Shader "Unlit/C6_SpecularPixelLevel"
+﻿Shader "Book/C6_SpecularPixelLevel"
 {
     Properties
     {

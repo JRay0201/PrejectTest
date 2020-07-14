@@ -1,4 +1,4 @@
-﻿Shader "Unlit/C6_SpecularBlinnPhong"
+﻿Shader "Book/C6_SpecularBlinnPhong"
 {
     Properties
     {
