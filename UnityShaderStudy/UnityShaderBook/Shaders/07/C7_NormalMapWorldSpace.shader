@@ -1,4 +1,4 @@
-﻿Shader "Book/C7_NormalMapTangentSpace"
+﻿Shader "Book/C7_NormalMapWorldSpace"
 {
     Properties
     {
@@ -43,10 +43,13 @@
 
             struct v2f
             {
-                float4 uv : TEXCOORD0;
-                float3 lightDir : TEXCOORD1;
-                float3 viewDir : TEXCOORD2;
                 float4 vertex : SV_POSITION;
+                float4 uv : TEXCOORD0;
+                float3 tDirWS : TEXCOORD1;
+                float3 bDirWS : TEXCOORD2;
+                float3 nDirWS : TEXCOORD3;
+                float3 lDirWS : TEXCOORD4;
+                float3 vDirWS : TEXCOORD5;
             };
 
             
@@ -57,34 +60,33 @@
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
                 o.uv.zw = TRANSFORM_TEX(v.uv,_BumpMap);
-                // Declares 3x3 matrix 'rotation', filled with tangent space basis
-                // #define TANGENT_SPACE_ROTATION \
-                // float3 binormal = cross( normalize(v.normal), normalize(v.tangent.xyz) ) * v.tangent.w; \
-                // float3x3 rotation = float3x3( v.tangent.xyz, binormal, v.normal )
-                TANGENT_SPACE_ROTATION;
-
-                o.lightDir = mul(rotation, ObjSpaceLightDir(v.vertex)).xyz;
-                o.viewDir = mul(rotation,ObjSpaceViewDir(v.vertex)).xyz;
+                
+                o.nDirWS = UnityObjectToWorldNormal(v.normal);
+                o.tDirWS = normalize(mul(unity_ObjectToWorld,float4(v.tangent.xyz , 0.0)).xyz);
+                o.bDirWS = normalize(cross(o.nDirWS , o.tDirWS) * v.tangent.w);
+                o.lDirWS = WorldSpaceLightDir(v.vertex);
+                o.vDirWS = WorldSpaceViewDir(v.vertex);
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
-                float3 tangentLightDir = normalize(i.lightDir);
-                float3 tangentViewDir = normalize(i.viewDir);
+                float3 var_NormalMap = UnpackNormal(tex2D(_BumpMap , i.uv.zw));
+                var_NormalMap.xy *= _BumpScale;
+                var_NormalMap.z = sqrt(1.0 - saturate(dot(var_NormalMap.xy,var_NormalMap.xy)));
+                
+                float3x3 TBN = float3x3(i.tDirWS , i.bDirWS , i.nDirWS);
+                float3 nDirWS = normalize(mul(var_NormalMap , TBN));          
 
-                float4 packedNormal = tex2D(_BumpMap,i.uv.zw);
-                float3 tangentNormal;
-                tangentNormal = UnpackNormal(packedNormal);
-                tangentNormal.xy *= _BumpScale;
-                tangentNormal.z = sqrt(1.0 - saturate(dot(tangentNormal.xy,tangentNormal.xy)));
+                float3 lDirWS = normalize(i.lDirWS);
 
                 float3 albedo = tex2D(_MainTex , i.uv.xy).rgb * _Color.rgb;
                 float3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz *albedo;
-                float3 diffuse = _LightColor0.rgb * albedo * max(0,dot(tangentNormal,tangentLightDir));
+                float3 diffuse = _LightColor0.rgb * albedo * max(0,dot(nDirWS,lDirWS));
 
-                float3 halfDir = normalize(tangentViewDir + tangentLightDir);
-                float3 specular = _LightColor0.rgb * _SpecularColor.rgb * pow(max(0,dot(halfDir , tangentNormal)),_Gloss);
+                float3 vDirWS = normalize(i.vDirWS);
+                float3 halfDir = normalize(vDirWS + lDirWS);
+                float3 specular = _LightColor0.rgb * _SpecularColor.rgb * pow(max(0,dot(halfDir , nDirWS)),_Gloss);
 
                 return fixed4(ambient + diffuse + specular , 1.0);
             }

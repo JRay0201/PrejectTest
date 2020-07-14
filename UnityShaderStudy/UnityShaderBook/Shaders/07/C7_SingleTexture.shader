@@ -62,7 +62,7 @@
                 float3 worldLightDir = normalize(UnityWorldSpaceLightDir(i.worldPos));
 
                 float3 albedo = tex2D(_MainTex,i.uv) * _Color;
-                float3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
+                float3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz*albedo;
 
                 float3 diffuse = _LightColor0.rgb * albedo.rgb * max(0,dot(worldNormal , worldLightDir));
 
